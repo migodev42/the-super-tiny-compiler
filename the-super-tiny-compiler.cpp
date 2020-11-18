@@ -21,6 +21,8 @@ class AST {
 public:
     string type;
     vector<Token> body;
+    string name;
+
     AST(string t) :type(t) {}
     AST(string t, vector<Token> b) :type(t), body(b) {}
 };
@@ -101,9 +103,33 @@ vector<Token> tokenizer(string input) {
 }
 
 
-vector<Token> walk(vector<Token>& tokens, int& current) {
+Token walk(vector<Token>& tokens, int& current) {
     Token token = tokens[current];
+
+    /* NUMBER */
+    if (token.type == "number") {
+        ++current;
+        return Token("NumberLiteral", token.value);
+    }
+
+    /* STRING */
+    if (token.type == "string") {
+        ++current;
+        return Token("StringLiteral", token.value);
+    }
+
     /* TODO */
+    /* PAREN */
+    if (token.type == "paren" && token.value == "(") {
+        token = tokens[++current];
+        // AST node = AST("CallExpression",token.value,vector<AST>({}) );
+        // 
+        // {
+        // type: 'CallExpression',
+        // name : token.value,
+        // params : [],
+        // };
+    }
     throw runtime_error(token.type);
 }
 
@@ -111,7 +137,7 @@ AST parser(vector<Token> tokens) {
     int current = 0;
     AST ast = AST("Program");
     while (current < tokens.size()) {
-        ast.body = walk(tokens, current);
+        ast.body.push_back(walk(tokens, current));
     }
     return ast;
 };
