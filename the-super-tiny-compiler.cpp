@@ -19,6 +19,10 @@ public:
 
 class AST {
 public:
+    string type;
+    vector<Token> body;
+    AST(string t) :type(t) {}
+    AST(string t, vector<Token> b) :type(t), body(b) {}
 };
 
 vector<Token> tokenizer(string);
@@ -97,4 +101,18 @@ vector<Token> tokenizer(string input) {
 }
 
 
+vector<Token> walk(vector<Token>& tokens, int& current) {
+    Token token = tokens[current];
+    /* TODO */
+    throw runtime_error(token.type);
+}
+
+AST parser(vector<Token> tokens) {
+    int current = 0;
+    AST ast = AST("Program");
+    while (current < tokens.size()) {
+        ast.body = walk(tokens, current);
+    }
+    return ast;
+};
 
