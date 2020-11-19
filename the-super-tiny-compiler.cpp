@@ -3,6 +3,11 @@
 #include <regex>
 #include <stdexcept>
 
+
+#include <iostream>
+using std::cout;
+using std::endl;
+
 using std::string;
 using std::vector;
 using std::regex_match;
@@ -17,25 +22,31 @@ public:
     Token(string t, string v) :type(t), value(v) {}
 };
 
-class AST {
+class AstNode {
 public:
     string type;
     vector<Token> body;
     string name;
 
-    AST(string t) :type(t) {}
-    AST(string t, vector<Token> b) :type(t), body(b) {}
+    AstNode(string t) :type(t) {}
+    AstNode(string t, vector<Token> b) :type(t), body(b) {}
 };
 
+
+
+
+
+
 vector<Token> tokenizer(string);
-AST parser(vector<Token>);
-AST transformer(AST);
-string codeGenerator(AST);
+AstNode parser(vector<Token>);
+AstNode transformer(AstNode);
+string codeGenerator(AstNode);
 
 vector<Token> tokenizer(string input) {
     int current = 0;
     vector<Token> tokens;
     while (current < input.size()) {
+
         string curr_char = string(1, input[current]);
 
         if (curr_char == "(") {
@@ -51,8 +62,8 @@ vector<Token> tokenizer(string input) {
         }
 
         /* WHITESPACE  */
-        if (regex_match(curr_char, regex("\s"))) {
-            current++;
+        if (regex_match(curr_char, regex("\\s"))) {
+            ++current;
             continue;
         }
 
@@ -61,7 +72,7 @@ vector<Token> tokenizer(string input) {
             string value;
             while (regex_match(curr_char, regex("[0-9]"))) {
                 value += curr_char;
-                curr_char = input[++current];
+                curr_char = string(1, input[++current]);
             }
 
             tokens.push_back(Token("number", value));
@@ -71,14 +82,14 @@ vector<Token> tokenizer(string input) {
         /* STRINGS */
         if (curr_char == "\"") {
             string value;
-            curr_char = input[++current];
+            curr_char = string(1, input[++current]);
 
             while (curr_char != "\"") {
                 value += curr_char;
-                curr_char = input[++current];
+                curr_char = string(1, input[++current]);
             }
 
-            curr_char = input[++current];
+            curr_char = string(1, input[++current]);
             tokens.push_back(Token("string", value));
             continue;
         }
@@ -86,11 +97,9 @@ vector<Token> tokenizer(string input) {
         /* LETTERS */
         if (regex_match(curr_char, regex("[a-z]"))) {
             string value;
-            curr_char = input[++current];
-
             while (regex_match(curr_char, regex("[a-z]"))) {
                 value += curr_char;
-                curr_char = input[++current];
+                curr_char = string(1, input[++current]);
             }
 
             tokens.push_back(Token("name", value));
@@ -101,7 +110,6 @@ vector<Token> tokenizer(string input) {
     }
     return tokens;
 }
-
 
 Token walk(vector<Token>& tokens, int& current) {
     Token token = tokens[current];
@@ -122,7 +130,7 @@ Token walk(vector<Token>& tokens, int& current) {
     /* PAREN */
     if (token.type == "paren" && token.value == "(") {
         token = tokens[++current];
-        // AST node = AST("CallExpression",token.value,vector<AST>({}) );
+        // AstNode node = AstNode("CallExpression",token.value,vector<AstNode>({}) );
         // 
         // {
         // type: 'CallExpression',
@@ -133,12 +141,28 @@ Token walk(vector<Token>& tokens, int& current) {
     throw runtime_error(token.type);
 }
 
-AST parser(vector<Token> tokens) {
+AstNode parser(vector<Token> tokens) {
     int current = 0;
-    AST ast = AST("Program");
+    AstNode ast = AstNode("Program");
     while (current < tokens.size()) {
         ast.body.push_back(walk(tokens, current));
     }
     return ast;
 };
 
+
+
+
+void printTokens(vector<Token> tokens) {
+    cout << "========= Tokens: ==========" << endl;
+    for (auto to : tokens) {
+        cout << to.type << " " << to.value << endl;
+    }
+    cout << "========== End Of Tokens ==========" << endl;
+}
+
+int main() {
+    cout << "Test run" << endl;
+    vector<Token> tokens = tokenizer("(add 2 2)");
+    printTokens(tokens);
+}
