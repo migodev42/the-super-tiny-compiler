@@ -2,7 +2,7 @@
 #include <vector>
 #include <regex>
 #include <stdexcept>
-
+#include <map>
 
 #include <iostream>
 using std::cout;
@@ -10,6 +10,7 @@ using std::endl;
 
 using std::string;
 using std::vector;
+using std::map;
 using std::regex_match;
 using std::regex;
 using std::runtime_error;
@@ -162,11 +163,21 @@ AstNode parser(vector<Token> tokens) {
     return ast;
 };
 
-AstNode transformer(AstNode ast) {
-    AstNode newAst = AstNode("Program");
-    ast.context = newAst.body;
-    
-}
+
+class Visitor {
+    AstNode* node;
+    AstNode* parent;
+    bool exit;
+};
+
+class transformer {
+private:
+    map<string, Visitor> visitors;
+public:
+    void traverser(AstNode ast) {
+        
+    }
+};
 
 
 
@@ -188,7 +199,9 @@ int main() {
     printTokens(tokens);
 
     AstNode ast = parser(tokens);
-    printAST(ast);
+    // printAST(ast);
+
+    AstNode newast = transformer(ast);
 
     return 0;
 }
