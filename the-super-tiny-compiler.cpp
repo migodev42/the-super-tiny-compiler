@@ -19,22 +19,29 @@ class Token {
 public:
     string type;
     string value;
-    Token(string t, string v) :type(t), value(v) {}
+    Token(string type, string value) :type(type), value(value) {}
 };
 
 class AstNode {
 public:
     string type;
-    vector<Token> body;
     string name;
+    string value;
 
-    AstNode(string t) :type(t) {}
-    AstNode(string t, vector<Token> b) :type(t), body(b) {}
+    AstNode* callee = nullptr;
+    AstNode* expression = nullptr;
+
+    vector<AstNode> body;
+    vector<AstNode> params;
+    vector<AstNode> arguments;
+    vector<AstNode> context;
+
+    AstNode(string type) :type(type) {}
+    AstNode(string type, vector<AstNode> body) :type(type), body(body) {}
+    AstNode(string type, string name) :type(type), name(name) {}
+    AstNode(string type, string name, vector<AstNode> params) :type(type), name(name), params(params) {}
+    AstNode(string type, AstNode* callee, vector<AstNode> arguments) :type(type), callee(callee), arguments(arguments) {}
 };
-
-
-
-
 
 
 vector<Token> tokenizer(string);
@@ -111,34 +118,39 @@ vector<Token> tokenizer(string input) {
     return tokens;
 }
 
-Token walk(vector<Token>& tokens, int& current) {
+/* TODO */
+AstNode walk(vector<Token>& tokens, int& current) {
     Token token = tokens[current];
 
     /* NUMBER */
     if (token.type == "number") {
         ++current;
-        return Token("NumberLiteral", token.value);
+        return AstNode("NumberLiteral", token.value);
     }
 
     /* STRING */
     if (token.type == "string") {
         ++current;
-        return Token("StringLiteral", token.value);
+        return AstNode("StringLiteral", token.value);
     }
 
     /* TODO */
     /* PAREN */
     if (token.type == "paren" && token.value == "(") {
         token = tokens[++current];
-        // AstNode node = AstNode("CallExpression",token.value,vector<AstNode>({}) );
-        // 
-        // {
-        // type: 'CallExpression',
-        // name : token.value,
-        // params : [],
-        // };
+        AstNode node = AstNode("CallExpression", token.value, vector<AstNode>({}));
+        token = tokens[++current];
+        while (
+            (token.type != "paren") ||
+            (token.type == "paren" && token.value != ")")
+            ) {
+            node.params.push_back(walk(tokens, current));
+            token = tokens[current];
+        }
+        ++current;
+        return node;
     }
-    throw runtime_error(token.type);
+    throw runtime_error("Unknown Type: " + token.type);
 }
 
 AstNode parser(vector<Token> tokens) {
@@ -150,6 +162,11 @@ AstNode parser(vector<Token> tokens) {
     return ast;
 };
 
+AstNode transformer(AstNode ast) {
+    AstNode newAst = AstNode("Program");
+    ast.context = newAst.body;
+    
+}
 
 
 
@@ -160,9 +177,18 @@ void printTokens(vector<Token> tokens) {
     }
     cout << "========== End Of Tokens ==========" << endl;
 }
+void printAST(AstNode ast) {
+}
 
 int main() {
     cout << "Test run" << endl;
-    vector<Token> tokens = tokenizer("(add 2 2)");
+    string rawcode = "(add 4 (subtract 23 8))";
+
+    vector<Token> tokens = tokenizer(rawcode);
     printTokens(tokens);
+
+    AstNode ast = parser(tokens);
+    printAST(ast);
+
+    return 0;
 }
