@@ -193,6 +193,7 @@ void CallExpression_Visitor(AstNode* node, AstNode* parent, bool exit) {
     if (!exit) {
         AstNode* callee = new AstNode("Identifier", node->name);
         AstNode* callExpr = new AstNode("CallExpression", callee, new vector<AstNode*>());
+        /* context 和 expression 的arguments指向同一地址，以便(*parent->context) push的时候添加调用参数到arguments*/
         node->context = callExpr->arguments;
         if (parent != nullptr) {
             if (parent->type != "CallExpression") {
@@ -234,9 +235,6 @@ public:
         visitor(node, parent, true);
     }
     void traverseArray(vector<AstNode*>* nodes, AstNode* parent) {
-        // for (auto node : ) {
-        //     traverseNode(node, parent);
-        // }
         for (int i = 0; i < (*nodes).size();++i) {
             traverseNode((*nodes)[i], parent);
         }
@@ -244,11 +242,7 @@ public:
     AstNode* traversal() {
         cout << "========== Traversal ============" << endl;
         AstNode* newast = new AstNode("Program");
-        // AST->context = ;
         traverseNode(AST, nullptr);
-        // vector<AstNode*> ctx;
-        // ctx.push_back(new AstNode("Expresion"));
-        // ast->context = ctx;
         newast->body = (*AST->context);
         cout << "========== End of Traversal ============" << endl;
         return newast;
@@ -256,6 +250,9 @@ public:
 
 };
 
+string codeGenerator(AstNode* ast) {
+
+}
 
 
 void printTokens(vector<Token> tokens) {
@@ -267,7 +264,7 @@ void printTokens(vector<Token> tokens) {
 }
 void printAST(AstNode* ast) {
 }
-void checkArguments(){
+void checkArguments() {
     // auto p = (*(*newast->body[0]).expression);
     // auto args = (*p.arguments);
 }
@@ -287,10 +284,9 @@ int main() {
     AstNode* newast = trans.traversal();
     printAST(newast);
 
-    
-    
-    // Generator().lisp2c(ast)
-    // AstNode newast = transformer(ast);
-
+    string gencode = codeGenerator(newast);
+    cout << "========= code generated! ====" << endl;
+    cout << gencode << endl;
+    cout << "========= End of the Program ====" << endl;
     return 0;
 }
