@@ -46,12 +46,6 @@ public:
     AstNode(string type, AstNode* callee, vector<AstNode*>* arguments) :type(type), callee(callee), arguments(arguments) {}
 };
 
-
-vector<Token> tokenizer(string);
-// AstNode* parser(vector<Token>);
-// AstNode transformer(AstNode);
-string codeGenerator(AstNode);
-
 vector<Token> tokenizer(string input) {
     int current = 0;
     vector<Token> tokens;
@@ -139,7 +133,6 @@ AstNode* walk(vector<Token>& tokens, int& current) {
         return new AstNode("StringLiteral", token.value);
     }
 
-    /* TODO */
     /* PAREN */
     if (token.type == "paren" && token.value == "(") {
         token = tokens[++current];
@@ -173,11 +166,6 @@ AstNode* parser(vector<Token> tokens) {
     return ast;
 };
 
-
-class Visitor {
-    // function<void(AstNode*, AstNode*, bool)> handler;
-    // Visitor(function<void(AstNode*, AstNode*, bool)> h) :handler(h) {};
-};
 
 void NumberLiteral_Visitor(AstNode* node, AstNode* parent, bool exit) {
     if (!exit) {
