@@ -34,21 +34,21 @@ public:
     AstNode* callee = nullptr;
     AstNode* expression = nullptr;
 
-    vector<AstNode> body;
-    vector<AstNode> params;
-    vector<AstNode*> arguments;
-    vector<AstNode*> context;
+    vector<AstNode*> body;
+    vector<AstNode*> params;
+    vector<AstNode*>* arguments;
+    vector<AstNode*>* context;
 
     AstNode(string type) :type(type) {}
-    AstNode(string type, vector<AstNode> body) :type(type), body(body) {}
+    AstNode(string type, vector<AstNode*> body) :type(type), body(body) {}
     AstNode(string type, string name) :type(type), name(name) {}
-    AstNode(string type, string name, vector<AstNode> params) :type(type), name(name), params(params) {}
-    AstNode(string type, AstNode* callee, vector<AstNode*> arguments) :type(type), callee(callee), arguments(arguments) {}
+    AstNode(string type, string name, vector<AstNode*> params) :type(type), name(name), params(params) {}
+    AstNode(string type, AstNode* callee, vector<AstNode*>* arguments) :type(type), callee(callee), arguments(arguments) {}
 };
 
 
 vector<Token> tokenizer(string);
-AstNode parser(vector<Token>);
+// AstNode* parser(vector<Token>);
 // AstNode transformer(AstNode);
 string codeGenerator(AstNode);
 
@@ -121,47 +121,55 @@ vector<Token> tokenizer(string input) {
     return tokens;
 }
 
-/* TODO */
-AstNode walk(vector<Token>& tokens, int& current) {
+
+AstNode* walk(vector<Token>& tokens, int& current) {
     Token token = tokens[current];
 
     /* NUMBER */
     if (token.type == "number") {
         ++current;
-        return AstNode("NumberLiteral", token.value);
+        cout << "NumberLiteral" << endl;
+        return new AstNode("NumberLiteral", token.value);
     }
 
     /* STRING */
     if (token.type == "string") {
         ++current;
-        return AstNode("StringLiteral", token.value);
+        cout << "StringLiteral" << endl;
+        return new AstNode("StringLiteral", token.value);
     }
 
     /* TODO */
     /* PAREN */
     if (token.type == "paren" && token.value == "(") {
         token = tokens[++current];
-        AstNode node = AstNode("CallExpression", token.value, vector<AstNode>({}));
+        cout << "CallExpression start" << endl;
+        AstNode* node = new AstNode("CallExpression", token.value, vector<AstNode*>({}));
         token = tokens[++current];
         while (
             (token.type != "paren") ||
             (token.type == "paren" && token.value != ")")
             ) {
-            node.params.push_back(walk(tokens, current));
+            node->params.push_back(walk(tokens, current));
             token = tokens[current];
         }
+        cout << "CallExpression end" << endl;
         ++current;
         return node;
     }
     throw runtime_error("Unknown Type: " + token.type);
 }
 
-AstNode parser(vector<Token> tokens) {
+AstNode* parser(vector<Token> tokens) {
     int current = 0;
-    AstNode ast = AstNode("Program");
+    cout << endl;
+    cout << "========== Walk ============" << endl;
+    AstNode* ast = new AstNode("Program");
     while (current < tokens.size()) {
-        ast.body.push_back(walk(tokens, current));
+        ast->body.push_back(walk(tokens, current));
     }
+    cout << "========== End of Walk ============" << endl;
+    cout << endl;
     return ast;
 };
 
@@ -172,29 +180,36 @@ class Visitor {
 };
 
 void NumberLiteral_Visitor(AstNode* node, AstNode* parent, bool exit) {
-    parent->context.push_back(new AstNode("NumberLiteral", node->name));
+    if (!exit) {
+        (*parent->context).push_back(new AstNode("NumberLiteral", node->name));
+    }
 }
 void StringLiteral_Visitor(AstNode* node, AstNode* parent, bool exit) {
-    parent->context.push_back(new AstNode("StringLiteral", node->name));
+    if (!exit) {
+        (*parent->context).push_back(new AstNode("StringLiteral", node->name));
+    }
 }
 void CallExpression_Visitor(AstNode* node, AstNode* parent, bool exit) {
-    AstNode* callee = new AstNode("Identifier", node->name);
-    AstNode* callExpr = new AstNode("CallExpression", callee, vector<AstNode*>({}));
-    node->context = callExpr->arguments;
-    if (parent != nullptr) {
-        if (parent->type != "CallExpression") {
-            AstNode* expr = new AstNode("ExpressionStatement");
-            expr->expression = callExpr;
-            callExpr = expr;
+    if (!exit) {
+        AstNode* callee = new AstNode("Identifier", node->name);
+        AstNode* callExpr = new AstNode("CallExpression", callee, new vector<AstNode*>());
+        node->context = callExpr->arguments;
+        if (parent != nullptr) {
+            if (parent->type != "CallExpression") {
+                AstNode* expr = new AstNode("ExpressionStatement");
+                expr->expression = callExpr;
+                callExpr = expr;
+            }
+            (*parent->context).push_back(callExpr);
         }
-        parent->context.push_back(callExpr);
     }
 }
 class transformer {
 private:
     map<string, function<void(AstNode*, AstNode*, bool)>> visitors;
+    AstNode* AST;
 public:
-    transformer() {
+    transformer(AstNode* AST) : AST(AST) {
         // 对应类型传递一个函数指针
         visitors["NumberLiteral"] = &NumberLiteral_Visitor;
         visitors["StringLiteral"] = &StringLiteral_Visitor;
@@ -202,44 +217,41 @@ public:
         visitors["Program"] = &CallExpression_Visitor;
     }
     void traverseNode(AstNode* node, AstNode* parent) {
+        cout << node->type << endl;
         auto visitor = visitors[node->type];
-        visitor(node, parent, true);
-        /* switch (node->type) {
-        case "Program":
-            traverseArray(node->body, node);
-            break;
-        case "CallExpression":
-            traverseArray(node->params, node);
-            break;
-        case "NumberLiteral":
-        case "StringLiteral":
-            break;
-        default:
-            throw runtime_error("unknown node type " + node.type);
-        } */
+        visitor(node, parent, false);
+
         if (node->type == "Program") {
-            traverseArray(node->body, node);
+            traverseArray(&(node->body), node);
         }
         else if (node->type == "CallExpression") {
-            traverseArray(node->params, node);
+            traverseArray(&(node->params), node);
         }
         else if (node->type == "NumberLiteral" || node->type == "StringLiteral") {}
         else {
             throw runtime_error("unknown node type " + node->type);
         }
-        visitor(node, parent, false);
+        visitor(node, parent, true);
     }
-    void traverseArray(vector<AstNode>& nodes, AstNode* parent) {
-        for (auto& node : nodes) {
-            traverseNode(&node, parent);
+    void traverseArray(vector<AstNode*>* nodes, AstNode* parent) {
+        // for (auto node : ) {
+        //     traverseNode(node, parent);
+        // }
+        for (int i = 0; i < (*nodes).size();++i) {
+            traverseNode((*nodes)[i], parent);
         }
     }
-    AstNode traversal(AstNode* ast) {
-        // AstNode* newast = new AstNode("Program");
-        // ast->context = newast->body;
-        traverseNode(ast, nullptr);
-
-        return *ast;
+    AstNode* traversal() {
+        cout << "========== Traversal ============" << endl;
+        AstNode* newast = new AstNode("Program");
+        // AST->context = ;
+        traverseNode(AST, nullptr);
+        // vector<AstNode*> ctx;
+        // ctx.push_back(new AstNode("Expresion"));
+        // ast->context = ctx;
+        newast->body = (*AST->context);
+        cout << "========== End of Traversal ============" << endl;
+        return newast;
     }
 
 };
@@ -253,7 +265,11 @@ void printTokens(vector<Token> tokens) {
     }
     cout << "========== End Of Tokens ==========" << endl;
 }
-void printAST(AstNode ast) {
+void printAST(AstNode* ast) {
+}
+void checkArguments(){
+    // auto p = (*(*newast->body[0]).expression);
+    // auto args = (*p.arguments);
 }
 
 int main() {
@@ -263,13 +279,16 @@ int main() {
     vector<Token> tokens = tokenizer(rawcode);
     printTokens(tokens);
 
-    AstNode ast = parser(tokens);
+    AstNode* ast = parser(tokens);
     printAST(ast);
 
-    transformer trans = transformer();
-    AstNode newast = trans.traversal(&ast);
+    //  = transformer(ast);
+    transformer trans(ast);
+    AstNode* newast = trans.traversal();
     printAST(newast);
 
+    
+    
     // Generator().lisp2c(ast)
     // AstNode newast = transformer(ast);
 
