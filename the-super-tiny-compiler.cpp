@@ -250,8 +250,43 @@ public:
 
 };
 
-string codeGenerator(AstNode* ast) {
-
+string codeGenerator(AstNode* node) {
+    string gencode;
+    if (node->type == "Program") {
+        for (auto item : node->body) {
+            gencode += codeGenerator(item) + "\n";
+        }
+        return gencode;
+    }
+    else if (node->type == "ExpressionStatement") {
+        return codeGenerator(node->expression) + ";";
+    }
+    else if (node->type == "CallExpression") {
+        gencode += codeGenerator(node->callee) + "(";
+        auto arguments = (*node->arguments);
+        for (int i = 0; i < arguments.size();++i) {
+            if (i == arguments.size() - 1) {
+                gencode += codeGenerator(arguments[i]);
+            }
+            else {
+                gencode += codeGenerator(arguments[i]) + ",";
+            }
+        }
+        gencode += ")";
+        return gencode;
+    }
+    else if (node->type == "Identifier") {
+        return node->name;
+    }
+    else if (node->type == "NumberLiteral") {
+        return node->name;
+    }
+    else if (node->type == "StringLiteral") {
+        return "\"" + node->name + "\"";
+    }
+    else {
+        throw runtime_error("codeGenerator: unknow astnode type" + node->type);
+    }
 }
 
 
@@ -262,31 +297,28 @@ void printTokens(vector<Token> tokens) {
     }
     cout << "========== End Of Tokens ==========" << endl;
 }
-void printAST(AstNode* ast) {
-}
 void checkArguments() {
     // auto p = (*(*newast->body[0]).expression);
     // auto args = (*p.arguments);
 }
 
 int main() {
-    cout << "Test run" << endl;
+    cout << "Compile (add 4 (subtract 23 8))" << endl;
     string rawcode = "(add 4 (subtract 23 8))";
 
     vector<Token> tokens = tokenizer(rawcode);
     printTokens(tokens);
 
     AstNode* ast = parser(tokens);
-    printAST(ast);
 
-    //  = transformer(ast);
     transformer trans(ast);
     AstNode* newast = trans.traversal();
-    printAST(newast);
 
     string gencode = codeGenerator(newast);
-    cout << "========= code generated! ====" << endl;
+    
+    cout << endl;
+    cout << "========= Code generated! ====" << endl;
     cout << gencode << endl;
-    cout << "========= End of the Program ====" << endl;
+    cout << "========= End of Code Generate ====" << endl;
     return 0;
 }
